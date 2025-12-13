@@ -384,6 +384,23 @@ export default function Home() {
       >
         {/* Header */}
         <div className="text-center space-y-4 pt-8">
+          {/* Project Info Banner */}
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 mb-4 shadow-sm">
+            <div className="text-sm font-bold text-amber-800 mb-1">
+              {lang === "ar" ? "مشروع الرياضيات" : "Projet de Mathématiques"}
+            </div>
+            <div className="text-lg font-bold text-slate-800">
+              SAIDI Melissa
+            </div>
+            <div className="text-xs text-slate-600 mt-1">
+              {lang === "ar" ? (
+                <span className="font-cairo">ثانوية الرياضيات محند مخبي</span>
+              ) : (
+                <span>Lycée des Mathématiques Mohand Mokhbi</span>
+              )}
+            </div>
+          </div>
+          
           <div className="inline-flex items-center justify-center p-3 bg-white/60 rounded-full shadow-sm backdrop-blur-sm ring-1 ring-white/50">
             <Sparkles className="w-5 h-5 text-indigo-500 mx-2" />
             <span className="text-indigo-600 font-bold tracking-wide text-xs md:text-sm uppercase">{t.header_tag}</span>
