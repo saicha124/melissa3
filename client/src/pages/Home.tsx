@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock, Unlock, RefreshCw, ArrowRight, Info, Sparkles, Shield, Key, BarChart3, ChevronDown, Check, Calculator, Globe, Binary } from "lucide-react";
 import { caesarCipher, vigenereCipher, ALPHABET } from "@/lib/caesar";
-import { generateKeys, rsaEncrypt, rsaDecrypt, isPrime } from "@/lib/rsa";
+import { generateKeys, rsaEncrypt, rsaDecrypt, isPrime, modPow } from "@/lib/rsa";
 import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
@@ -327,7 +327,7 @@ export default function Home() {
           m: m,
           e: keys.publicKey.e,
           n: keys.publicKey.n,
-          res: Number(BigInt(m) ** BigInt(keys.publicKey.e) % BigInt(keys.publicKey.n)),
+          res: modPow(m, keys.publicKey.e, keys.publicKey.n),
           step1: `${firstChar} → ${m}`,
           step2: `${m}^${keys.publicKey.e} mod ${keys.publicKey.n}`
         };
@@ -339,7 +339,7 @@ export default function Home() {
           m: firstNum,
           e: keys.privateKey.d, // using d as exponent
           n: keys.privateKey.n,
-          res: Number(BigInt(firstNum) ** BigInt(keys.privateKey.d) % BigInt(keys.privateKey.n)),
+          res: modPow(firstNum, keys.privateKey.d, keys.privateKey.n),
           step1: `${firstNum}`,
           step2: `${firstNum}^${keys.privateKey.d} mod ${keys.privateKey.n}`
         };
@@ -646,28 +646,91 @@ export default function Home() {
                     
                     <div className="space-y-6 py-4">
                       {activeCipher === "rsa" ? (
-                         // RSA Explanation
+                         // RSA Explanation with detailed steps
                          <div className="space-y-4">
-                           <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-                             <div className="flex justify-between mb-2">
-                               <span className="text-sm font-bold text-emerald-800">{t.dialog_rsa_step1}</span>
-                               <span className="font-mono">{explanation.firstChar} → {explanation.rsaCalc.m}</span>
+                           {/* Show current keys being used */}
+                           <div className="grid grid-cols-2 gap-2 text-xs">
+                             <div className="bg-emerald-50 p-2 rounded-lg border border-emerald-100">
+                               <div className="text-[10px] text-emerald-600 font-bold uppercase">Clé Publique</div>
+                               <div className="font-mono text-emerald-800">e = {keys.publicKey.e}</div>
+                               <div className="font-mono text-emerald-800">n = {keys.publicKey.n}</div>
                              </div>
-                             <div className="flex justify-between mb-2">
-                               <span className="text-sm font-bold text-emerald-800">{t.dialog_rsa_step2}</span>
-                               <span className="font-mono">{explanation.rsaCalc.m}^{explanation.rsaCalc.e}</span>
-                             </div>
-                             <div className="flex justify-between mb-2">
-                               <span className="text-sm font-bold text-emerald-800">{t.dialog_rsa_step3}</span>
-                               <span className="font-mono">mod {explanation.rsaCalc.n}</span>
-                             </div>
-                              <div className="border-t border-emerald-200 pt-2 flex justify-between">
-                               <span className="text-sm font-bold text-emerald-800">{t.dialog_rsa_step4}</span>
-                               <span className="font-mono font-bold text-lg">{explanation.rsaCalc.res}</span>
+                             <div className="bg-red-50 p-2 rounded-lg border border-red-100">
+                               <div className="text-[10px] text-red-600 font-bold uppercase">Clé Privée</div>
+                               <div className="font-mono text-red-800">d = {keys.privateKey.d}</div>
+                               <div className="font-mono text-red-800">n = {keys.privateKey.n}</div>
                              </div>
                            </div>
+
+                           {/* Show how n is calculated */}
+                           <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                             <div className="text-xs font-bold text-blue-800 mb-2">📐 Comment calculer n:</div>
+                             <div className="font-mono text-sm text-blue-900">
+                               n = p × q = {p} × {q} = {keys.publicKey.n}
+                             </div>
+                             <div className="text-xs text-blue-600 mt-1">
+                               φ(n) = (p-1) × (q-1) = {p-1} × {q-1} = {keys.phi}
+                             </div>
+                           </div>
+                           
+                           {/* Detailed calculation steps */}
+                           <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 space-y-3">
+                             <div className="text-sm font-bold text-emerald-900 mb-3">
+                               {mode === "encrypt" ? "🔒 Étapes du chiffrement:" : "🔓 Étapes du déchiffrement:"}
+                             </div>
+                             
+                             <div className="space-y-2">
+                               <div className="flex justify-between items-center">
+                                 <span className="text-sm text-emerald-800">1️⃣ Valeur de départ (M):</span>
+                                 <span className="font-mono font-bold">{explanation.rsaCalc.m}</span>
+                               </div>
+                               
+                               <div className="flex justify-between items-center">
+                                 <span className="text-sm text-emerald-800">
+                                   2️⃣ {mode === "encrypt" ? "Exposant (e):" : "Exposant (d):"}
+                                 </span>
+                                 <span className="font-mono font-bold">{explanation.rsaCalc.e}</span>
+                               </div>
+                               
+                               <div className="flex justify-between items-center">
+                                 <span className="text-sm text-emerald-800">3️⃣ Modulo (n):</span>
+                                 <span className="font-mono font-bold">{explanation.rsaCalc.n}</span>
+                               </div>
+                               
+                               <div className="border-t-2 border-emerald-200 pt-2 mt-2">
+                                 <div className="text-xs text-emerald-700 mb-1">📝 Calcul complet:</div>
+                                 <div className="font-mono text-sm text-emerald-900 bg-white p-2 rounded">
+                                   {explanation.rsaCalc.m}<sup>{explanation.rsaCalc.e}</sup> mod {explanation.rsaCalc.n} = ?
+                                 </div>
+                               </div>
+                               
+                               <div className="bg-white p-3 rounded-lg border border-emerald-200">
+                                 <div className="text-xs text-emerald-700 mb-1">🧮 Explication:</div>
+                                 <div className="text-xs text-slate-600 leading-relaxed">
+                                   On calcule {explanation.rsaCalc.m} × {explanation.rsaCalc.m} × ... ({explanation.rsaCalc.e} fois), 
+                                   puis on garde le reste de la division par {explanation.rsaCalc.n}.
+                                 </div>
+                               </div>
+                               
+                               <div className="border-t-2 border-emerald-300 pt-3 flex justify-between items-center bg-emerald-100 -mx-4 -mb-3 px-4 pb-3 rounded-b-xl">
+                                 <span className="text-sm font-bold text-emerald-900">✨ Résultat:</span>
+                                 <span className="font-mono font-bold text-2xl text-emerald-700">{explanation.rsaCalc.res}</span>
+                               </div>
+                             </div>
+                           </div>
+                           
+                           <div className="bg-amber-50 p-3 rounded-xl border border-amber-200">
+                             <div className="text-xs font-bold text-amber-800 mb-1">💡 Pour comprendre:</div>
+                             <div className="text-xs text-amber-700 leading-relaxed">
+                               {mode === "encrypt" 
+                                 ? `Le chiffrement utilise la clé publique (e=${keys.publicKey.e}, n=${keys.publicKey.n}). Tout le monde peut chiffrer, mais seule la personne avec la clé privée peut déchiffrer!`
+                                 : `Le déchiffrement utilise la clé privée (d=${keys.privateKey.d}, n=${keys.privateKey.n}). Seul le propriétaire de cette clé peut lire le message!`
+                               }
+                             </div>
+                           </div>
+                           
                            <p className="text-xs text-center text-slate-500 italic">
-                             RSA travaille avec des nombres très grands. Ici, nous utilisons de petits nombres premiers pour l'exemple.
+                             RSA utilise de très grands nombres premiers en pratique. Ici, p={p} et q={q} sont petits pour faciliter l'apprentissage.
                            </p>
                          </div>
                       ) : (
@@ -876,16 +939,43 @@ export default function Home() {
                </div>
             </div>
             ) : (
-               // RSA Preview just shows numbers
+               // RSA Preview with detailed info
                 <div className="glass-card rounded-3xl p-5 bg-white/40 backdrop-blur-sm border border-white/40">
                   <h3 className="text-sm font-bold text-emerald-600 uppercase tracking-wider mb-4 flex items-center">
-                     {t.preview_title} (Nombres)
+                     {t.preview_title}
                   </h3>
-                   <div className="flex flex-wrap gap-2 justify-center font-mono text-xs text-emerald-800" dir="ltr">
-                     {result ? result.split(" ").slice(0, 10).map((n, i) => (
-                       <span key={i} className="bg-emerald-100 px-2 py-1 rounded">{n}</span>
-                     )) : <span className="text-slate-400 italic">{t.preview_empty}</span>}
-                   </div>
+                  
+                  {/* Show n value prominently */}
+                  <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100 mb-4">
+                    <div className="text-xs font-bold text-emerald-700 mb-1">
+                      {mode === "encrypt" ? "🔒 Chiffrement" : "🔓 Déchiffrement"}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-emerald-600">
+                          {mode === "encrypt" ? "e" : "d"} = 
+                        </span>
+                        <span className="font-mono font-bold text-emerald-900 ml-1">
+                          {mode === "encrypt" ? keys.publicKey.e : keys.privateKey.d}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-emerald-600">n = </span>
+                        <span className="font-mono font-bold text-emerald-900">
+                          {mode === "encrypt" ? keys.publicKey.n : keys.privateKey.n}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-[10px] text-emerald-500 mt-1 font-mono">
+                      n = {p} × {q} = {keys.publicKey.n}
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2 justify-center font-mono text-xs text-emerald-800" dir="ltr">
+                    {result ? result.split(" ").slice(0, 10).map((n, i) => (
+                      <span key={i} className="bg-emerald-100 px-2 py-1 rounded">{n}</span>
+                    )) : <span className="text-slate-400 italic">{t.preview_empty}</span>}
+                  </div>
                 </div>
             )}
 
