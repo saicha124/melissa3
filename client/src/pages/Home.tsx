@@ -698,17 +698,28 @@ export default function Home() {
                                </div>
                                
                                <div className="border-t-2 border-emerald-200 pt-2 mt-2">
-                                 <div className="text-xs text-emerald-700 mb-1">📝 Calcul complet:</div>
-                                 <div className="font-mono text-sm text-emerald-900 bg-white p-2 rounded">
-                                   {explanation.rsaCalc.m}<sup>{explanation.rsaCalc.e}</sup> mod {explanation.rsaCalc.n} = ?
+                                 <div className="text-xs text-emerald-700 mb-2">📝 Calcul complet:</div>
+                                 <div className="font-mono text-emerald-900 bg-white p-3 rounded border border-emerald-100 text-center">
+                                   <span className="text-lg font-bold text-blue-600">{explanation.rsaCalc.m}</span>
+                                   <span className="text-sm mx-1">^</span>
+                                   <span className="text-lg font-bold text-purple-600">{explanation.rsaCalc.e}</span>
+                                   <span className="text-sm mx-2">mod</span>
+                                   <span className="text-lg font-bold text-emerald-600">{explanation.rsaCalc.n}</span>
+                                   <span className="text-sm mx-2">=</span>
+                                   <span className="text-lg font-bold text-amber-600">?</span>
+                                 </div>
+                                 <div className="text-[10px] text-center text-slate-500 mt-1">
+                                   (M<sup className="text-[8px]">{mode === "encrypt" ? "e" : "d"}</sup> mod n)
                                  </div>
                                </div>
                                
                                <div className="bg-white p-3 rounded-lg border border-emerald-200">
-                                 <div className="text-xs text-emerald-700 mb-1">🧮 Explication:</div>
-                                 <div className="text-xs text-slate-600 leading-relaxed">
-                                   On calcule {explanation.rsaCalc.m} × {explanation.rsaCalc.m} × ... ({explanation.rsaCalc.e} fois), 
-                                   puis on garde le reste de la division par {explanation.rsaCalc.n}.
+                                 <div className="text-xs text-emerald-700 mb-2">🧮 Explication pas à pas:</div>
+                                 <div className="text-xs text-slate-600 leading-relaxed space-y-1">
+                                   <p><strong>Étape 1:</strong> On prend le nombre <span className="font-mono text-blue-600 font-bold">{explanation.rsaCalc.m}</span></p>
+                                   <p><strong>Étape 2:</strong> On le multiplie par lui-même <span className="font-mono text-purple-600 font-bold">{explanation.rsaCalc.e}</span> fois</p>
+                                   <p><strong>Étape 3:</strong> On divise par <span className="font-mono text-emerald-600 font-bold">{explanation.rsaCalc.n}</span> et on garde le reste</p>
+                                   <p className="pt-1 border-t border-slate-100"><strong>Résultat:</strong> Le reste = <span className="font-mono text-amber-600 font-bold">{explanation.rsaCalc.res}</span></p>
                                  </div>
                                </div>
                                
