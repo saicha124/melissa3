@@ -388,7 +388,19 @@ export function StepByStepAnimation({
   const [currentCharIndex, setCurrentCharIndex] = useState(-1);
   const [animationComplete, setAnimationComplete] = useState(false);
   
-  const cleanMessage = message.toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 10);
+  // For RSA decryption, we need to handle space-separated numbers differently
+  const isRsaDecrypt = cipher === "rsa" && !isEncrypting;
+  const rawCleanMessage = message.toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 50);
+  
+  // For RSA decryption, split by spaces to get numbers; otherwise use characters
+  const rsaNumbers = isRsaDecrypt ? rawCleanMessage.trim().split(/\s+/).filter(n => n.length > 0) : [];
+  const cleanMessage = isRsaDecrypt 
+    ? rsaNumbers.join(" ") 
+    : rawCleanMessage.replace(/\s+/g, "").slice(0, 10);
+  
+  // Display items: for RSA decrypt, show each number as a unit; otherwise each character
+  const displayItems = isRsaDecrypt ? rsaNumbers : cleanMessage.split("");
+  
   const cleanKeyword = keyword.toUpperCase().replace(/[^A-Z]/g, "") || "KEY";
   
   const labels = {
@@ -448,7 +460,38 @@ export function StepByStepAnimation({
     setAnimationComplete(false);
   };
 
-  const getCharResult = (char: string, index: number): { result: string; keyChar: string; calculation: string } => {
+  const getCharResult = (item: string, index: number): { result: string; keyChar: string; calculation: string } => {
+    // For RSA decryption, item is a number string like "156"
+    if (isRsaDecrypt) {
+      if (!rsaKeys) return { result: "?", keyChar: "-", calculation: "-" };
+      const c = parseInt(item, 10);
+      if (isNaN(c)) return { result: "?", keyChar: "-", calculation: "-" };
+      
+      const d = rsaKeys.privateKey.d;
+      const n = rsaKeys.publicKey.n;
+      
+      // Calculate c^d mod n
+      let result = 1;
+      let base = c % n;
+      let exp = d;
+      while (exp > 0) {
+        if (exp % 2 === 1) result = (result * base) % n;
+        exp = Math.floor(exp / 2);
+        base = (base * base) % n;
+      }
+      
+      // Convert back to letter (1=A, 2=B, etc.)
+      const letter = result >= 1 && result <= 26 ? String.fromCharCode(result + 64) : String(result);
+      
+      return {
+        result: letter,
+        keyChar: `(${d}, ${n})`,
+        calculation: `${c}^${d} mod ${n} = ${result} = ${letter}`
+      };
+    }
+    
+    // For non-RSA decrypt cases, item is a single character
+    const char = item;
     if (!ALPHABET.includes(char)) {
       return { result: char, keyChar: "-", calculation: "-" };
     }
@@ -474,9 +517,10 @@ export function StepByStepAnimation({
         calculation: `(${charPos} ${isEncrypting ? '+' : '-'} ${keyShift}) mod 26 = ${newPos}`
       };
     } else {
+      // RSA encryption (not decryption)
       if (!rsaKeys) return { result: "?", keyChar: "-", calculation: "-" };
       const m = charPos + 1;
-      const exponent = isEncrypting ? rsaKeys.publicKey.e : rsaKeys.privateKey.d;
+      const exponent = rsaKeys.publicKey.e;
       const n = rsaKeys.publicKey.n;
       let result = 1;
       let base = m % n;
@@ -530,12 +574,12 @@ export function StepByStepAnimation({
 
       <div className="overflow-x-auto">
         <div className="min-w-max">
-          <div className="grid gap-1" style={{ gridTemplateColumns: `auto repeat(${cleanMessage.length}, 1fr)` }}>
+          <div className="grid gap-1" style={{ gridTemplateColumns: `auto repeat(${displayItems.length}, 1fr)` }}>
             <div className="text-[10px] font-bold text-slate-400 uppercase p-2">{l.original}</div>
-            {cleanMessage.split("").map((char, i) => (
+            {displayItems.map((item, i) => (
               <motion.div
                 key={`orig-${i}`}
-                className={`w-10 h-10 rounded-lg flex items-center justify-center font-mono font-bold text-lg transition-all ${
+                className={`${isRsaDecrypt ? "min-w-14 px-2" : "w-10"} h-10 rounded-lg flex items-center justify-center font-mono font-bold ${isRsaDecrypt ? "text-sm" : "text-lg"} transition-all ${
                   i === currentCharIndex 
                     ? "bg-amber-400 text-white scale-110 shadow-lg" 
                     : i < currentCharIndex 
@@ -545,15 +589,15 @@ export function StepByStepAnimation({
                 animate={i === currentCharIndex ? { scale: [1, 1.1, 1] } : {}}
                 transition={{ duration: 0.3 }}
               >
-                {char}
+                {item}
               </motion.div>
             ))}
 
             {cipher !== "rsa" && (
               <>
                 <div className="text-[10px] font-bold text-slate-400 uppercase p-2">{l.key}</div>
-                {cleanMessage.split("").map((char, i) => {
-                  const { keyChar } = getCharResult(char, i);
+                {displayItems.map((item, i) => {
+                  const { keyChar } = getCharResult(item, i);
                   return (
                     <motion.div
                       key={`key-${i}`}
@@ -565,7 +609,7 @@ export function StepByStepAnimation({
                             : "bg-slate-50 text-slate-400"
                       }`}
                     >
-                      {cipher === "caesar" ? shift : (ALPHABET.includes(char) ? cleanKeyword[i % cleanKeyword.length] : "-")}
+                      {cipher === "caesar" ? shift : (ALPHABET.includes(item) ? cleanKeyword[i % cleanKeyword.length] : "-")}
                     </motion.div>
                   );
                 })}
@@ -576,13 +620,13 @@ export function StepByStepAnimation({
               <ArrowRight className="w-3 h-3 mr-1" />
               {l.result}
             </div>
-            {cleanMessage.split("").map((char, i) => {
-              const { result } = getCharResult(char, i);
+            {displayItems.map((item, i) => {
+              const { result } = getCharResult(item, i);
               const isProcessed = i < currentCharIndex || (i === currentCharIndex && animationComplete);
               return (
                 <motion.div
                   key={`result-${i}`}
-                  className={`w-10 h-10 rounded-lg flex items-center justify-center font-mono font-bold text-lg transition-all ${
+                  className={`${isRsaDecrypt ? "min-w-14 px-2" : "w-10"} h-10 rounded-lg flex items-center justify-center font-mono font-bold text-lg transition-all ${
                     i === currentCharIndex && !animationComplete
                       ? "bg-gradient-to-br from-green-400 to-emerald-500 text-white shadow-lg animate-pulse" 
                       : isProcessed
@@ -600,7 +644,7 @@ export function StepByStepAnimation({
           </div>
 
           <AnimatePresence>
-            {currentCharIndex >= 0 && currentCharIndex < cleanMessage.length && (
+            {currentCharIndex >= 0 && currentCharIndex < displayItems.length && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -609,7 +653,7 @@ export function StepByStepAnimation({
               >
                 <div className="text-xs text-slate-500 mb-2">{l.calculation}:</div>
                 <div className="font-mono text-lg text-indigo-700 font-bold" dir="ltr">
-                  {getCharResult(cleanMessage[currentCharIndex], currentCharIndex).calculation}
+                  {getCharResult(displayItems[currentCharIndex], currentCharIndex).calculation}
                 </div>
               </motion.div>
             )}
@@ -621,7 +665,7 @@ export function StepByStepAnimation({
         <motion.div
           key={currentCharIndex}
           onAnimationComplete={() => {
-            if (currentCharIndex < cleanMessage.length - 1) {
+            if (currentCharIndex < displayItems.length - 1) {
               setTimeout(() => setCurrentCharIndex(prev => prev + 1), 100);
             } else {
               setIsPlaying(false);
