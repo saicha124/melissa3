@@ -20,6 +20,9 @@ Preferred communication style: Simple, everyday language.
 
 The frontend is organized under `client/src/` with:
 - `pages/` - Route components (Home.tsx contains the main cryptography interface)
+- `components/` - Custom components including:
+  - `CipherEducation.tsx` - Educational content with history, explanations, examples, formulas for each cipher
+  - `StepByStepAnimation` - Interactive character-by-character encryption animation with play/pause/reset controls
 - `components/ui/` - Reusable shadcn/ui components
 - `lib/` - Utility functions including cipher implementations (caesar.ts, rsa.ts)
 - `hooks/` - Custom React hooks
