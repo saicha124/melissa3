@@ -24,6 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { CipherEducation, StepByStepAnimation } from "@/components/CipherEducation";
 
 const translations = {
   fr: {
@@ -868,6 +869,32 @@ export default function Home() {
                 </div>
               </div>
             </div>
+
+            {/* Detailed Educational Content */}
+            <CipherEducation 
+              cipher={activeCipher}
+              lang={lang}
+              caesarShift={caesarShift}
+              vigenereKey={vigenereKey}
+              rsaKeys={keys}
+            />
+
+            {/* Step-by-Step Animation */}
+            {encryptMessage && (
+              <Card className="bg-white/80 backdrop-blur border-0 shadow-lg">
+                <CardContent className="p-5">
+                  <StepByStepAnimation
+                    cipher={activeCipher}
+                    message={encryptMessage}
+                    shift={caesarShift}
+                    keyword={vigenereKey}
+                    rsaKeys={keys}
+                    isEncrypting={true}
+                    lang={lang}
+                  />
+                </CardContent>
+              </Card>
+            )}
 
             {/* Alphabet Visualization (Simplified for Comparison view) */}
             {activeCipher !== "rsa" ? (
